@@ -10,6 +10,7 @@ import Terrain from "./terrain"
 import PlantingZone from "./planting-zone"
 import TemporalDistortion from "./temporal-distortion"
 import TimePortal from "./time-portal"
+import PrehistoricScene from "./prehistoric-scene"
 import type { Era } from "../chrono-harvester"
 
 // Define era-specific settings
@@ -99,7 +100,7 @@ export default function GameScene({ era, addCrop, useSeed }: GameSceneProps) {
   return (
     <>
       {/* Environment */}
-      <Sky {...settings.skyProps} />
+      <Sky {...{ ...settings.skyProps, sunPosition: settings.skyProps.sunPosition as [number, number, number] }} />
       <Environment preset={settings.environment as any} />
       <ambientLight intensity={0.5} />
       <directionalLight position={[10, 10, 5]} intensity={1} castShadow shadow-mapSize={2048} />
@@ -120,6 +121,9 @@ export default function GameScene({ era, addCrop, useSeed }: GameSceneProps) {
           onPlant={() => handlePlant(zone.era as Era)}
         />
       ))}
+
+      {/* Era-specific scenes */}
+      {era === "prehistoric" && <PrehistoricScene active={true} />}
 
       {/* Temporal Distortions */}
       {distortions.map((distortion) => (

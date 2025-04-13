@@ -10,7 +10,7 @@ type PlantingZoneProps = {
   position: [number, number, number]
   era: Era
   onHarvest: () => void
-  onPlant: () => boolean
+  onPlant: () => void
 }
 
 // Era-specific crop colors
@@ -66,74 +66,63 @@ export default function PlantingZone({ position, era, onHarvest, onPlant }: Plan
         // Move to next growth stage if progress reaches 1
         if (newProgress >= 1) {
           setGrowthStage((prev) => prev + 1)
+          setShowInteractPrompt(isPlayerNear && growthStage + 1 === GROWTH_STAGES.length - 1)
           return 0
         }
-
         return newProgress
       })
     }
   })
 
-  // Handle keyboard interaction (E key)
+  // Handle player interaction (planting or harvesting)
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() === "e" && isPlayerNear) {
-        // Prevent rapid interactions
+    const handleKeyPress = (event: KeyboardEvent) => {
+      if (event.code === "KeyE" && isPlayerNear) {
         const now = Date.now()
+        // Prevent rapid interactions with a cooldown
         if (now - lastInteractionRef.current < 500) return
         lastInteractionRef.current = now
 
         if (!isPlanted) {
-          // Try to plant a seed
-          const success = onPlant()
-          if (success) {
-            setIsPlanted(true)
-            setGrowthStage(0)
-            setGrowthProgress(0)
-            setShowInteractPrompt(false)
-          }
+          // Plant a seed
+          setIsPlanted(true)
+          setGrowthStage(0)
+          setGrowthProgress(0)
+          setShowInteractPrompt(false)
+          onPlant()
         } else if (growthStage === GROWTH_STAGES.length - 1) {
           // Harvest mature crop
-          onHarvest()
           setIsPlanted(false)
           setGrowthStage(0)
           setGrowthProgress(0)
-          setShowInteractPrompt(true)
+          setShowInteractPrompt(isPlayerNear)
+          onHarvest()
         }
       }
     }
 
-    window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [isPlayerNear, isPlanted, growthStage, onPlant, onHarvest])
-
-  // Calculate crop height based on growth stage and progress
-  const getCropHeight = () => {
-    const baseHeights = [0.1, 0.3, 0.7, 1]
-    if (growthStage < GROWTH_STAGES.length - 1) {
-      return baseHeights[growthStage] + (baseHeights[growthStage + 1] - baseHeights[growthStage]) * growthProgress
+    window.addEventListener("keydown", handleKeyPress)
+    return () => {
+      window.removeEventListener("keydown", handleKeyPress)
     }
-    return baseHeights[growthStage]
-  }
+  }, [isPlayerNear, isPlanted, growthStage, onHarvest, onPlant])
 
   return (
     <group position={position}>
-      {/* Planting zone marker */}
-      <mesh position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <circleGeometry args={[1, 32]} />
-        <meshStandardMaterial color="#8d6e63" opacity={0.8} transparent />
+      {/* Ground marker */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <circleGeometry args={[0.6, 32]} />
+        <meshStandardMaterial color={isPlanted ? cropColors[era] : "#6b7280"} opacity={0.8} transparent />
       </mesh>
 
-      {/* Planted crop */}
+      {/* Planted crop visualization */}
       {isPlanted && (
-        <mesh position={[0, getCropHeight() / 2, 0]} castShadow>
-          <cylinderGeometry args={[0.05, 0.1, getCropHeight(), 8]} />
+        <mesh position={[0, growthStage * 0.1 + 0.1, 0]} castShadow>
+          <cylinderGeometry args={[0.05, 0.1, 0.2 + growthStage * 0.2, 8]} />
           <meshStandardMaterial color={cropColors[era]} />
-
-          {/* Crop top/leaves */}
           {growthStage > 0 && (
-            <mesh position={[0, getCropHeight() / 2, 0]} castShadow>
-              <sphereGeometry args={[0.2 * getCropHeight(), 8, 8]} />
+            <mesh position={[0, 0.15 + growthStage * 0.1, 0]}>
+              <sphereGeometry args={[0.15 + growthStage * 0.05, 8, 8]} />
               <meshStandardMaterial color={cropColors[era]} />
             </mesh>
           )}
@@ -143,14 +132,13 @@ export default function PlantingZone({ position, era, onHarvest, onPlant }: Plan
       {/* Interaction prompt */}
       {showInteractPrompt && (
         <Text
-          position={[0, 1.5, 0]}
-          rotation={[0, 0, 0]}
-          fontSize={0.2}
+          position={[0, 1, 0]}
+          rotation={[0, Math.PI / 4, 0]}
+          fontSize={0.3}
           color="white"
           anchorX="center"
           anchorY="middle"
-          outlineWidth={0.01}
-          outlineColor="black"
+          userData={{ keepAlive: true }}
         >
           {isPlanted ? "Press E to Harvest" : "Press E to Plant"}
         </Text>

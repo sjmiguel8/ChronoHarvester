@@ -6,6 +6,7 @@ import { RigidBody } from "@react-three/rapier"
 import { Text } from "@react-three/drei"
 import { MeshDistortMaterial } from "@react-three/drei"
 import { Color } from "three"
+import { useRouter } from 'next/navigation' // ADDED
 
 type TimePortalProps = {
   position: [number, number, number]
@@ -14,6 +15,7 @@ type TimePortalProps = {
 export default function TimePortal({ position }: TimePortalProps) {
   const portalRef = useRef<any>(null)
   const ringRef = useRef<any>(null)
+  const router = useRouter() // ADDED
 
   // Animate the portal
   useFrame((state, delta) => {
@@ -32,10 +34,15 @@ export default function TimePortal({ position }: TimePortalProps) {
     }
   })
 
+  const handlePortalClick = () => { // ADDED
+    console.log("Portal clicked!")
+    router.push('/era-selection') // Replace '/era-selection' with the actual route
+  }
+
   return (
     <group position={position}>
       {/* Portal effect */}
-      <mesh ref={portalRef} castShadow>
+      <mesh ref={portalRef} castShadow onClick={handlePortalClick}> {/* ADDED onClick */}
         <torusGeometry args={[2, 0.5, 16, 32]} />
         <MeshDistortMaterial
           color="#00bcd4"
